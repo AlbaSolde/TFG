@@ -1370,7 +1370,7 @@ void setX(int npoints, string xmode) {
         for (int n = 0; n < npoints; n++) X[n] = (double(rand()) + I * double(rand()));
         //X = {-1/sqrt(2)-I*double(1/sqrt(2)), -1/sqrt(2)+I*double(1/sqrt(2)), +1/sqrt(2)-I*double(1/sqrt(2)), 1/sqrt(2)+I*double(1/sqrt(2))};
     } else {
-        /* cout << "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!"; */
+        cout << "ERROR!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!";
     }
 
     //cout << "X: " << X_mat << endl;
@@ -2564,24 +2564,24 @@ double GD_co(double &r, double &rho, double &rho_interpolated, int num_iteration
     multhweights = all_multhweights[n];
 
 
-    E_0_co(r, 0, grad_rho, e0);
+    E_0_co(R, 0, grad_rho, e0);
     double E0_0 = e0, E0_prime_0 = grad_rho;
 
-    E_0_co(r, 1, grad_rho, e0);
+    E_0_co(R, 1, grad_rho, e0);
     double E0_1 = e0, E0_prime_1 = grad_rho;
 
     double max_g;
-    rho = initial_guess(r, E0_0, E0_1, E0_prime_0, E0_prime_1, max_g);
+    rho = initial_guess(R, E0_0, E0_1, E0_prime_0, E0_prime_1, max_g);
     //cout << "rho ig: " << rho << endl;
 
     rho_interpolated = rho;
 
-    if (rho <= 0 || rho >= 1) return E_0_co(0.5, rho, grad_rho, e0);
+    if (rho <= 0 || rho >= 1) return E_0_co(R, rho, grad_rho, e0);
 
-    E_0_co(r, rho + 0.0000001, grad_rho, e0);
+    E_0_co(R, rho + 0.0000001, grad_rho, e0);
     double E0_prime_guess_plus = grad_rho;
 
-    E_0_co(r, rho, grad_rho, e0);
+    E_0_co(R, rho, grad_rho, e0);
     double E0_prime_guess = grad_rho;
 
     // si e0'(rho)-r és positiva del punt fins a 1, si és neg de 0 al punt

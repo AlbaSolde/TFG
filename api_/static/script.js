@@ -47,6 +47,7 @@ function calculateExponents(event) {
 function plotFromFunction() {
     const y = document.getElementById('yVar').value;
     const x = document.getElementById('xVar').value;
+    const xVar2 = document.getElementById('xVar2').value; /* Pel contour plot */
     const [min, max] = document.getElementById('xRange').value.split(',').map(Number);
     const points = Number(document.getElementById('points').value);
     const typeModulation = document.getElementById('funcTypeModulation').value;

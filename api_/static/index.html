@@ -87,6 +87,7 @@
                         <select id="plotType">
                             <option value="linear">Linear</option>
                             <option value="log">Log</option>
+                            <option value="contour">Contour</option>
                         </select>
                     </div>
                     <div class="input-group">
@@ -126,10 +127,23 @@
                             <option value="Rho">Optimal rho</option>
                         </select>
                     </div>
+                    <!-- X1 -->
                     <div class="input-group">
-                        <label for="xVar">X:</label>
+                        <label for="xVar">X1:</label>
                         <select id="xVar">
                             <!-- X variable - per decidir -->
+                            <option value="M">M</option>
+                            <option value="SNR">SNR</option>
+                            <option value="Rate">Rate</option>
+                            <option value="N">N</option>
+                            <option value="n">n</option>
+                            <option value="th">Threshold</option>
+                        </select>
+                    </div>
+                    <!-- X2 - OCULTA per defecte -->
+                    <div class="input-group" id="x2-group" style="display: none;">
+                        <label for="xVar2">X2:</label>
+                        <select id="xVar2">
                             <option value="M">M</option>
                             <option value="SNR">SNR</option>
                             <option value="Rate">Rate</option>
