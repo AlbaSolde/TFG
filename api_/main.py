@@ -169,6 +169,86 @@ async def generate_plot_from_function(plot_data: FunctionPlotRequest):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating plot data: {str(e)}")
     
+
+
+class ContourPlotRequest(BaseModel):
+    y: str
+    x1: str
+    x2: str
+    rang_x1: list[float]
+    rang_x2: list[float]
+    points: int
+    typeModulation: str
+    M: float
+    SNR: float
+    Rate: float
+    N: float
+    n: float
+    th: float
+
+@app.post("/plot_contour")
+async def generate_contour_plot(plot_data: ContourPlotRequest):
+    try:
+        # Generar valores de x1
+        if plot_data.x1 in ["M", "N", "n"]:
+            raw_x1 = np.linspace(plot_data.rang_x1[0], plot_data.rang_x1[1], plot_data.points)
+            x1_vals = np.unique(np.round(raw_x1).astype(int))
+        else:
+            x1_vals = np.linspace(plot_data.rang_x1[0], plot_data.rang_x1[1], plot_data.points)
+
+        # Generar valores de x2
+        if plot_data.x2 in ["M", "N", "n"]:
+            raw_x2 = np.linspace(plot_data.rang_x2[0], plot_data.rang_x2[1], plot_data.points)
+            x2_vals = np.unique(np.round(raw_x2).astype(int))
+        else:
+            x2_vals = np.linspace(plot_data.rang_x2[0], plot_data.rang_x2[1], plot_data.points)
+
+        z_matrix = []
+
+        for val1 in x1_vals:
+            row = []
+            for val2 in x2_vals:
+                args = {
+                    "M": plot_data.M,
+                    "SNR": plot_data.SNR,
+                    "Rate": plot_data.Rate,
+                    "N": plot_data.N,
+                    "n": plot_data.n,
+                    "th": plot_data.th
+                }
+                args[plot_data.x1] = val1
+                args[plot_data.x2] = val2
+
+                result = (ctypes.c_float * 3)()
+                lib.exponents(
+                    ctypes.c_float(args["M"]),
+                    plot_data.typeModulation.encode('utf-8'),
+                    ctypes.c_float(args["SNR"]),
+                    ctypes.c_float(args["Rate"]),
+                    ctypes.c_float(args["N"]),
+                    ctypes.c_float(args["n"]),
+                    ctypes.c_float(args["th"]),
+                    result
+                )
+
+                y_map = {
+                    "ErrorProb": result[0],
+                    "Exponents": result[1],
+                    "Rho": result[2]
+                }
+                row.append(y_map[plot_data.y])
+            z_matrix.append(row)
+
+        return {
+            "x1": x1_vals.tolist(),
+            "x2": x2_vals.tolist(),
+            "z": z_matrix
+        }
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating contour plot: {str(e)}")
+
+
 # ------------------------ CHATBOT -------------------------------------------------------------------------
 class ChatbotRequest(BaseModel):
     message: str

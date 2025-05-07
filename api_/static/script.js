@@ -47,8 +47,9 @@ function calculateExponents(event) {
 function plotFromFunction() {
     const y = document.getElementById('yVar').value;
     const x = document.getElementById('xVar').value;
-    const xVar2 = document.getElementById('xVar2').value; /* Pel contour plot */
+    const x2 = document.getElementById('xVar2').value; /* Pel contour plot */
     const [min, max] = document.getElementById('xRange').value.split(',').map(Number);
+    const [min2, max2] = document.getElementById('xRange2').value.split(',').map(Number);
     const points = Number(document.getElementById('points').value);
     const typeModulation = document.getElementById('funcTypeModulation').value;
 
@@ -73,6 +74,7 @@ function plotFromFunction() {
         return;
     } 
 
+    // TODO: FER COMPROVACIONS BÉ!!!
     for (const [key, value] of Object.entries(inputs)) {
         if (key !== x && (value === '' || isNaN(parseFloat(value)))) {
             resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Please enter a valid value for ${key}.</p>`;
@@ -85,9 +87,22 @@ function plotFromFunction() {
     const color = document.getElementById('lineColor').value || 'steelblue';
     const plotType = document.getElementById('plotType').value;
 
-    const payload = {
-        y, x,
-        rang_x: [min, max],
+    // CONTOUR CASE
+    if (plotType === "contour") {
+
+        // Comprovar si x2 es un valor vàlid
+        if (isNaN(min2) || isNaN(max2) || min2 >= max2) {
+            resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Please enter a valid range (min < max) for X2 axis.</p>`;
+            resultDiv.classList.add('show');
+            return;
+        } 
+
+        const payload = {
+        y,
+        x1: x,        // ojo: debe ser x1, no x
+        x2,
+        rang_x1: [min, max],
+        rang_x2: [min2, max2],
         points,
         typeModulation,
         M: parseFloat(M) || 0,
@@ -95,40 +110,73 @@ function plotFromFunction() {
         Rate: parseFloat(Rate) || 0,
         N: parseFloat(N) || 0,
         n: parseFloat(n) || 0,
-        th: parseFloat(th) || 0,
-        color,
-        lineType,
-        plotType
-    };
+        th: parseFloat(th) || 0
+        };
+      
+        fetch("/plot_contour", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify(payload)
+        })
+          .then(response => response.json())
+          .then(data => {
+            drawContourPlot(data.x1, data.x2, data.z);
+          })
+          .catch(error => console.error("Error:", error));
+    }
+    // LINEAR I LOG CASE
+    else{
 
-    /* console.log("Sending payload to /plot_function:", payload); */
+        const payload = {
+            y, x,
+            rang_x: [min, max],
+            points,
+            typeModulation,
+            M: parseFloat(M) || 0,
+            SNR: parseFloat(SNR) || 0,
+            Rate: parseFloat(Rate) || 0,
+            N: parseFloat(N) || 0,
+            n: parseFloat(n) || 0,
+            th: parseFloat(th) || 0,
+            color,
+            lineType,
+            plotType
+        };
+    
+        /* console.log("Sending payload to /plot_function:", payload); */
+    
+        document.getElementById('plot-result').innerHTML = "";
+        document.getElementById('plot-result').classList.remove('show');
+    
+        fetch('/plot_function', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        })
+        .then(response => {
+            if (!response.ok) throw new Error("Error en /plot_function");
+            return response.json();
+        })
+        .then(data => {
+            console.log("Datos recibidos del backend:", data); 
+            drawInteractivePlot(data.x, data.y, {
+                color: color,
+                lineType: lineType,
+                plotType: plotType
+            });
+        })
+        .catch(error => {
+            console.error("Error plotting data", error);
+            const resultDiv = document.getElementById('plot-result');
+            resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Unable to process the data. Please verify your inputs.</p>`;
+            resultDiv.classList.add('show');
+        }); 
+    }
+      
 
-    document.getElementById('plot-result').innerHTML = "";
-    document.getElementById('plot-result').classList.remove('show');
-
-    fetch('/plot_function', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(payload)
-    })
-    .then(response => {
-        if (!response.ok) throw new Error("Error en /plot_function");
-        return response.json();
-    })
-    .then(data => {
-        console.log("Datos recibidos del backend:", data); 
-        drawInteractivePlot(data.x, data.y, {
-            color: color,
-            lineType: lineType,
-            plotType: plotType
-        });
-    })
-    .catch(error => {
-        console.error("Error plotting data", error);
-        const resultDiv = document.getElementById('plot-result');
-        resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Unable to process the data. Please verify your inputs.</p>`;
-        resultDiv.classList.add('show');
-    });
+    
 }
 
 
@@ -193,6 +241,53 @@ function plotManually() {
         resultDiv.classList.add('show');
     }
 }
+
+// Contour plot case
+function onLineTypeChange() {
+    const plotType = document.getElementById("plotType").value;
+    const x2Group = document.getElementById("x2-group");
+    const xRange2Group = document.getElementById("xRange2-group");
+
+    if (plotType === "contour") {
+        x2Group.style.display = "block";
+        xRange2Group.style.display = "block";
+    } else {
+        x2Group.style.display = "none";
+        xRange2Group.style.display = "none";
+    }
+}
+
+
+function drawContourPlot(x1, x2, zMatrix) {
+    // 1) Generar un nuevo plotId
+    const plotId = `plot-${plotIdCounter++}`;
+  
+    // 2) Calcular etiqueta por defecto
+    const yText = document.getElementById('yVar').selectedOptions[0].text;
+    const x1Text = document.getElementById('xVar').selectedOptions[0].text;
+    const x2Text = document.getElementById('xVar2').selectedOptions[0].text;
+    const label = `${yText} / ${x1Text} & ${x2Text}`;
+  
+    // 3) Color
+    const gradient = 'linear-gradient(45deg, #a1c4fd, #c2e9fb)';
+  
+    // 4) Añadir a activePlots
+    activePlots.push({
+      plotId,
+      type: 'contour',
+      x1, x2, z: zMatrix,
+      label,
+      color: gradient
+    });
+  
+    // 5) Re-renderizar todo
+    renderAll();
+    updatePlotListUI();
+  }
+  
+  
+  
+  
 
 
 // Interactive multi-plot with zoom, grid, tooltip, overlay & removal
@@ -371,99 +466,146 @@ function zoomed(event) {
 
 function renderAll() {
     if (!window.__svg || !window.__content) return;
-
+  
     if (activePlots.length === 0) {
-        window.__content.selectAll('*').remove();
-        drawDefaultGrid();
-        return;
+      window.__content.selectAll('*').remove();
+      drawDefaultGrid();
+      return;
     }
-
+  
     d3.select('#plot-container').style('display', 'block');
     d3.select('#plot-controls-wrapper').style('display', 'flex');
-
-    let allX = [], allY = [], allLog = false;
+  
+    // --- Calcular dominio de ejes incluyendo contour ---
+    let xVals = [], yVals = [], anyLog = false;
+  
     activePlots.forEach(p => {
-        allX = allX.concat(p.x);
-        allY = allY.concat(p.y);
-        if (p.plotType === 'log') allLog = true;
+      if (p.type === 'contour') {
+        xVals = xVals.concat(p.x1);
+        yVals = yVals.concat(p.x2);
+      } else {
+        xVals = xVals.concat(p.x);
+        yVals = yVals.concat(p.y);
+        if (p.plotType === 'log') anyLog = true;
+      }
     });
-
-    if (allX.length === 0) return;
-
-    const xExtent = d3.extent(allX);
-    const yExtent = d3.extent(allY);
-
-    const xMin = allLog ? Math.max(xExtent[0], 1e-6) : xExtent[0];
-    const yMin = allLog ? Math.max(yExtent[0], 1e-6) : yExtent[0];
-
-    window.__xScale = (allLog ? d3.scaleLog() : d3.scaleLinear()).range([0, window.__innerWidth]);
-    window.__yScale = (allLog ? d3.scaleLog() : d3.scaleLinear()).range([window.__innerHeight, 0]);
-    window.__xScale.domain([xMin, xExtent[1]]);
-    window.__yScale.domain([yMin, yExtent[1]]);
-
+  
+    const xExtent = d3.extent(xVals);
+    const yExtent = d3.extent(yVals);
+    const xMin = anyLog ? Math.max(xExtent[0], 1e-6) : xExtent[0];
+    const yMin = anyLog ? Math.max(yExtent[0], 1e-6) : yExtent[0];
+  
+    window.__xScale = (anyLog ? d3.scaleLog() : d3.scaleLinear())
+      .domain([xMin, xExtent[1]])
+      .range([0, window.__innerWidth]);
+  
+    window.__yScale = (anyLog ? d3.scaleLog() : d3.scaleLinear())
+      .domain([yMin, yExtent[1]])
+      .range([window.__innerHeight, 0]);
+  
     window.__svg.call(window.__zoom.transform, d3.zoomIdentity);
     setTimeout(() => zoomed({ transform: d3.zoomIdentity }), 0);
-
-    const groups = window.__content.selectAll('.plot-group')
-        .data(activePlots, d => d.plotId);
-
-    const enterG = groups.enter()
-        .append('g')
-        .attr('class', d => `plot-group ${d.plotId}`);
-
-    enterG.append('path').attr('class', 'line');
-    enterG.append('g').attr('class', 'points');
-
-    window.__content.selectAll('.plot-group').each(function(d) {
+  
+    // --- Data-join para líneas ---
+    const linePlots = activePlots.filter(p => p.type !== 'contour');
+    const lineGroups = window.__content.selectAll('.plot-group')
+      .data(linePlots, d => d.plotId);
+  
+    const lineEnter = lineGroups.enter()
+      .append('g').attr('class', d => `plot-group ${d.plotId}`);
+    lineEnter.append('path').attr('class', 'line');
+    lineEnter.append('g').attr('class', 'points');
+  
+    lineGroups.merge(lineEnter).each(function(d) {
         const g = d3.select(this);
+      
+        // Generar la línea
         const lineGen = d3.line()
-            .curve(d3.curveLinear)
-            .x((_, i) => window.__xScale(d.x[i]))
-            .y((_, i) => window.__yScale(d.y[i]));
-
+          .curve(d3.curveLinear)
+          .x((_, i) => window.__xScale(d.x[i]))
+          .y((_, i) => window.__yScale(d.y[i]));
+      
         const dashMap = {
-            'solid': '',
-            'dashed': '6,4',
-            'dotted': '2,4',
-            'dot-dash': '4,2,2,2'
+          'solid': '',
+          'dashed': '6,4',
+          'dotted': '2,4',
+          'dot-dash': '4,2,2,2'
         };
-
+      
+        // Dibujar el path
         g.select('path.line')
-            .datum(d.y)
-            .attr('fill', 'none')
-            .attr('stroke', d.color)
-            .attr('stroke-width', 2)
-            .attr('stroke-dasharray', dashMap[d.dashStyle] || '')
-            .attr('d', lineGen);
-
+          .datum(d.y)
+          .attr('fill', 'none')
+          .attr('stroke', d.color)
+          .attr('stroke-width', 2)
+          .attr('stroke-dasharray', dashMap[d.dashStyle] || '')
+          .attr('d', lineGen);
+      
+        // Dibujar los puntos
         const pts = g.select('g.points').selectAll('circle')
-            .data(d.x.map((xVal, i) => ({ x: xVal, y: d.y[i] })));
-
+          .data(d.x.map((xVal, i) => ({ x: xVal, y: d.y[i] })));
+      
         pts.enter().append('circle')
-            .merge(pts)
-            .attr('r', 4)
-            .attr('fill', d.color)
-            .attr('cx', d => window.__xScale(d.x))
-            .attr('cy', d => window.__yScale(d.y))
-            .attr('visibility', d3.select('#togglePoints').property('checked') ? 'visible' : 'hidden')
-            .on('mouseover', function(event, d) {
-                window.__tooltip
-                    .html(`x: ${d.x}<br>y: ${d.y.toFixed(4)}`)
-                    .style('left', (event.offsetX + 15) + 'px')
-                    .style('top', (event.offsetY - 25) + 'px')
-                    .style('opacity', 1);
-            })
-            .on('mouseout', () => window.__tooltip.style('opacity', 0));
-
+          .merge(pts)
+          .attr('r', 4)
+          .attr('fill', d.color)
+          .attr('cx', pt => window.__xScale(pt.x))
+          .attr('cy', pt => window.__yScale(pt.y))
+          .attr('visibility', d3.select('#togglePoints').property('checked') ? 'visible' : 'hidden')
+          .on('mouseover', function(event, pt) {
+            window.__tooltip
+              .html(`x: ${pt.x}<br>y: ${pt.y.toFixed(4)}`)
+              .style('left', (event.offsetX + 15) + 'px')
+              .style('top', (event.offsetY - 25) + 'px')
+              .style('opacity', 1);
+          })
+          .on('mouseout', () => window.__tooltip.style('opacity', 0));
+      
         pts.exit().remove();
     });
-
-    groups.exit().remove();
+      
+    lineGroups.exit().remove();
+  
+    // --- Data-join para contour ---
+    const contourPlots = activePlots.filter(p => p.type === 'contour');
+    const contourGroups = window.__content.selectAll('.contour-group')
+      .data(contourPlots, d => d.plotId);
+  
+    const contourEnter = contourGroups.enter()
+      .append('g').attr('class', d => `contour-group ${d.plotId}`);
+  
+    contourGroups.merge(contourEnter).each(function(p) {
+      const g = d3.select(this);
+      g.selectAll('rect').remove();
+  
+      // escala de color usando z
+      const colorScale = d3.scaleSequential(d3.interpolateYlGnBu)
+        .domain([d3.min(p.z.flat()), d3.max(p.z.flat())]);
+  
+      const xs = window.__xScale.copy();
+      const ys = window.__yScale.copy();
+      const dx = xs(p.x1[1]) - xs(p.x1[0]);
+      const dy = ys(p.x2[0]) - ys(p.x2[1]);
+  
+      for (let i = 0; i < p.x1.length; i++) {
+        for (let j = 0; j < p.x2.length; j++) {
+          g.append('rect')
+            .attr('x', xs(p.x1[i]))
+            .attr('y', ys(p.x2[j]))
+            .attr('width', dx)
+            .attr('height', dy)
+            .attr('fill', colorScale(p.z[i][j]))
+            .attr('opacity', 0.7);
+        }
+      }
+    });
+    contourGroups.exit().remove();
+  
     updatePlotListUI();
     d3.select('#plot-controls-wrapper').style('display', 'flex');
-}
-
-
+  }
+  
+  
 function drawInteractivePlot(x, y, opts) {
     opts = opts || {};
     const plotId = `plot-${plotIdCounter++}`;
@@ -535,6 +677,12 @@ function updatePlotListUI() {
         colorBox.style.width = '15px';
         colorBox.style.height = '15px';
         colorBox.style.background = p.color;
+        if (p.type === 'contour') {
+            // Si es contour, usamos gradient
+            colorBox.style.backgroundImage = p.color;
+          } else {
+            colorBox.style.background = p.color;
+          }
 
         // Aquí va el texto editable
         const textSpan = document.createElement('span');
@@ -638,33 +786,6 @@ function toggleManualInputs() {
     manual.style.display = visible ? 'none' : 'block';
     btn.textContent = visible ? 'Add manually' : 'Hide manual inputs';
 }
-
-/* Validate data for X selection */
-(function setupValidation() {
-    const xVarSelect = document.getElementById('xVar');
-    const inputFields = {
-        M: document.getElementById('fixedM'),
-        SNR: document.getElementById('fixedSNR'),
-        Rate: document.getElementById('fixedRate'),
-        N: document.getElementById('fixedN'),
-        n: document.getElementById('fixedn'),
-        th: document.getElementById('fixedth')
-    };
-    xVarSelect.addEventListener('change', () => {
-        const sel = xVarSelect.value;
-        for (let k in inputFields) {
-            if (k === sel) {
-                inputFields[k].value = '';
-                inputFields[k].disabled = true;
-                inputFields[k].placeholder = '(Set by X)';
-            } else {
-                inputFields[k].disabled = false;
-                inputFields[k].placeholder = k + '...';
-            }
-        }
-    });
-    window.addEventListener('DOMContentLoaded', () => xVarSelect.dispatchEvent(new Event('change')));
-})();
 
 // ------------------------ CHATBOT SCRIPT -----------------------------------
 function sendMessage() {

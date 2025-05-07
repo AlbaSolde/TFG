@@ -7,7 +7,7 @@
     <!-- Estil del html -->
     <!-- <link rel="stylesheet" href="styles.css"/> --> <!-- Per obrir directament al navegador -->
     <!--     <link rel="stylesheet" href="/static/styles.css"> Pel docker -->
-    <link rel="stylesheet" href="/static/styles.css?v=1.7">
+    <link rel="stylesheet" href="/static/styles.css?v=1.9">
 
 
     <!-- Importa D3 -->
@@ -16,7 +16,7 @@
     <!-- Les funcions estan definides a script.js -->
     <!-- <script src="script.js"></script> --> <!-- Pel obrir directament amb el navegador -->
     <!-- <script src="/static/script.js"></script> Pel docker -->
-    <script src="/static/script.js?v=1.9"></script>
+    <script src="/static/script.js?v=1.12"></script>
 
 
 </head>
@@ -83,14 +83,16 @@
                 <!-- Parámetros comunes en una sola fila -->
                 <div class="input-group-row">
                     <div class="input-group">
+                        <!-- Plot type -->
                         <label for="plotType">Plot Type:</label>
-                        <select id="plotType">
+                        <select id="plotType" onchange="onLineTypeChange()">
                             <option value="linear">Linear</option>
                             <option value="log">Log</option>
                             <option value="contour">Contour</option>
                         </select>
                     </div>
                     <div class="input-group">
+                        <!-- Line type -->
                         <label for="lineType">Line Type:</label>
                         <select id="lineType">
                             <option value="solid">Solid</option>
@@ -100,6 +102,7 @@
                           </select>      
                     </div>
                     <div class="input-group">
+                        <!-- Color -->
                         <label for="lineColor">Color:</label>
                         <input list="colorOptions" id="lineColor" placeholder="steelblue">
                         <datalist id="colorOptions">
@@ -154,8 +157,13 @@
                     </div>
                     <!-- Rang x -->
                     <div class="input-group">
-                        <label for="xRange">X Range:</label>
+                        <label for="xRange">X1 Range:</label>
                         <input type="text" id="xRange" placeholder="e.g. 1,100">
+                    </div>
+                    <!-- Rang x2 - OCULTA per defecte -->
+                    <div class="input-group" id="xRange2-group" style="display: none;">
+                        <label for="xRange2">X2 Range:</label>
+                        <input type="text" id="xRange2" placeholder="e.g. 1,100">
                     </div>
                     <!-- Punts pel plots -->
                     <div class="input-group">

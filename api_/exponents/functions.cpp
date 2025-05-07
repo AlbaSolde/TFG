@@ -2630,7 +2630,7 @@ double GD_co(double &r, double &rho, double &rho_interpolated, int num_iteration
         E_0_co(r, rho, grad_rho, e0); // todo: 0.5
         auto stop_e0 = std::chrono::high_resolution_clock::now();
         auto duration_e0 = std::chrono::duration_cast<std::chrono::microseconds>(stop_e0 - start_e0);
-        cout << "duration_e0: " << duration_e0.count() << endl;
+        /* cout << "duration_e0: " << duration_e0.count() << endl; */
 
         grad_rho -= R;
         grad_rho = -grad_rho;
@@ -2642,7 +2642,7 @@ double GD_co(double &r, double &rho, double &rho_interpolated, int num_iteration
             auto stop_XX = std::chrono::high_resolution_clock::now();
             auto duration_XX = std::chrono::duration_cast<std::chrono::microseconds>(stop_XX - start_XX);
             //NAG_co_times.push_back(duration_XX - sum_(inner_times));
-            cout << "NAG duration: " << duration_XX.count() << endl;
+            /* cout << "NAG duration: " << duration_XX.count() << endl; */
             rho = max(0.0, min(rho, 1.0)); // todo change
             return e0 - rho * R;
         }
@@ -3155,7 +3155,7 @@ double NAG_co(double &r, double &rho, double learning_rate, int num_iterations, 
             auto stop_XX = std::chrono::high_resolution_clock::now();
             auto duration_XX = std::chrono::duration_cast<std::chrono::microseconds>(stop_XX - start_XX);
             //NAG_co_times.push_back(duration_XX - sum_(inner_times));
-            cout << "NAG duration: " << duration_XX.count() << endl;
+            /* cout << "NAG duration: " << duration_XX.count() << endl; */
             return e0 - rho * R;
         }
         cout << fixed << setprecision(17) << i << " " << rho << " " << e0 << " " << e0 - rho * R << " " << grad_rho
@@ -3167,7 +3167,7 @@ double NAG_co(double &r, double &rho, double learning_rate, int num_iterations, 
     auto stop_XX = std::chrono::high_resolution_clock::now();
     auto duration_XX = std::chrono::duration_cast<std::chrono::microseconds>(stop_XX - start_XX);
     //NAG_co_times.push_back(duration_XX - sum_(inner_times));
-    cout << "NAG duration: " << duration_XX.count() << endl;
+    /* cout << "NAG duration: " << duration_XX.count() << endl; */
     return e0 - rho * R;
 }
 

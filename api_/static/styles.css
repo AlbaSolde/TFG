@@ -295,9 +295,33 @@ form button.compute-error:active, .funct2 button.create-graphic:active {
     transform: scale(0.95); /* Efecto de reducción al presionar */
 }
 
+.input-group {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 0;
+    min-width: 120px;
+    max-width: 180px;
+    box-sizing: border-box;
+}
+
+/* Forzar estilos también en los inputs que se muestran dinámicamente */
+#x2-group,
+#xRange2-group {
+    display: flex; /* sobrescribe display:block si JS lo usa */
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    flex: 1 1 0;
+    min-width: 120px;
+    max-width: 180px;
+}
+
+
 /* Chat Section */
-.chat-section {
-    width: 100%; /* Asegura que ocupe todo el ancho de la pantalla */
+/* .chat-section {
+    width: 100%; 
     position: sticky;
     bottom: 0;
     left: 0;
@@ -309,7 +333,7 @@ form button.compute-error:active, .funct2 button.create-graphic:active {
     justify-content: center;
     align-items: center;
     margin-top: 20px;
-    box-sizing: border-box; /* Incluye padding y border en el ancho total */
+    box-sizing: border-box; 
 }
 
 .chat-box {
@@ -322,55 +346,55 @@ form button.compute-error:active, .funct2 button.create-graphic:active {
     display: flex;
     flex-direction: column;
     gap: 10px;
-    box-sizing: border-box; /* Incluye padding y border en el ancho total */
+    box-sizing: border-box; 
 }
 
 .chat-box h2 {
-    font-size: 2em; /* Tamaño del título */
+    font-size: 2em;
     text-align: center;
-    margin: 0 0 10px 0; /* Espacio inferior para separar del contenido */
-    color: rgb(47, 48, 79); /* Color acorde al diseño */
-    font-weight: bold; /* Destaca el título */
+    margin: 0 0 10px 0;
+    color: rgb(47, 48, 79);
+    font-weight: bold; 
 }
 
 .chat-input-container {
-    display: flex; /* Alinea el input y el botón en una fila */
-    gap: 10px; /* Espacio entre el input y el botón */
+    display: flex;
+    gap: 10px; 
     width: 100%;
 }
 
 .chat-input-container input#chat-input {
-    flex: 1; /* Hace que el input ocupe todo el espacio disponible */
-    padding: 10px; /* Espaciado interno */
+    flex: 1;
+    padding: 10px; 
     border: 1px solid #ccc;
     border-radius: 5px;
-    font-size: 0.9em; /* Tamaño del texto */
+    font-size: 0.9em; 
 }
 
 .chat-input-container button.send-button {
-    background-color: rgb(47, 48, 79); /* Color del botón */
+    background-color: rgb(47, 48, 79);
     color: white;
     border: none;
     border-radius: 50%;
-    width: 40px; /* Tamaño del botón */
+    width: 40px; 
     height: 40px;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.2em; /* Tamaño del icono */
+    font-size: 1.2em; 
     cursor: pointer;
     transition: transform 0.2s ease, background-color 0.2s ease;
 }
 
 .chat-input-container button.send-button:hover {
-    background-color: rgb(50, 50, 100); /* Color más oscuro al pasar el ratón */
-    transform: scale(1.1); /* Efecto de agrandamiento */
+    background-color: rgb(50, 50, 100); 
+    transform: scale(1.1); 
 }
 
 .chat-input-container button.send-button:active {
-    background-color: rgb(30, 30, 50); /* Color más oscuro al hacer clic */
-    transform: scale(0.95); /* Efecto de reducción al presionar */
-}
+    background-color: rgb(30, 30, 50); 
+    transform: scale(0.95); 
+} */
 
 /* Footer */
 footer {
