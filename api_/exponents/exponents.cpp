@@ -33,7 +33,6 @@ extern "C" {
         results[0] = pow(2,-n*e0); // Pe
         results[1] = e0; // exp
         results[2] = rho_gd;
-        //results[2] = 1.1;
         return results;
     }
 }

@@ -2576,7 +2576,8 @@ double GD_co(double &r, double &rho, double &rho_interpolated, int num_iteration
 
     rho_interpolated = rho;
 
-    if (rho <= 0 || rho >= 1) return E_0_co(R, rho, grad_rho, e0);
+    if (rho <= 0 || rho >= 1) return E_0_co(R, max(0.0, min(rho, 1.0)), grad_rho, e0) - max(0.0, min(rho, 1.0)) * R;
+    
 
     E_0_co(R, rho + 0.0000001, grad_rho, e0);
     double E0_prime_guess_plus = grad_rho;
@@ -2627,7 +2628,7 @@ double GD_co(double &r, double &rho, double &rho_interpolated, int num_iteration
         cout << "duration_e0: " << duration_e0.count() << endl;
         */
         auto start_e0 = std::chrono::high_resolution_clock::now();
-        E_0_co(r, rho, grad_rho, e0); // todo: 0.5
+        E_0_co(R, rho, grad_rho, e0); // todo: 0.5
         auto stop_e0 = std::chrono::high_resolution_clock::now();
         auto duration_e0 = std::chrono::duration_cast<std::chrono::microseconds>(stop_e0 - start_e0);
         /* cout << "duration_e0: " << duration_e0.count() << endl; */

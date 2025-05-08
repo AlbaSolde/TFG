@@ -269,9 +269,7 @@ function drawContourPlot(x1, x2, zMatrix) {
     const label = `${yText} / ${x1Text} & ${x2Text}`;
   
     // 3) Color
-    const gradient = 'linear-gradient(45deg, #a1c4fd, #c2e9fb)';
-  
-    // 4) Añadir a activePlots
+    const gradient = 'linear-gradient(90deg, #ffffcc, #a1dab4, #41b6c4, #2c7fb8, #253494)';
     activePlots.push({
       plotId,
       type: 'contour',
@@ -385,6 +383,23 @@ function initializeChart() {
     window.__zoom = d3.zoom().scaleExtent([1,10]).on('zoom',zoomed);
     window.__svg.call(window.__zoom);
 
+    const defs = svg.append('defs');
+    defs.append('linearGradient')
+        .attr('id', 'contour-gradient')
+        .attr('x1', '0%').attr('y1', '100%')
+        .attr('x2', '0%').attr('y2', '0%')
+      .selectAll('stop')
+      .data([
+        { offset: '0%',   color: '#ffeda0' },
+        { offset: '25%',  color: '#feb24c' },
+        { offset: '50%',  color: '#fd8d3c' },
+        { offset: '75%',  color: '#f03b20' },
+        { offset: '100%', color: '#bd0026' }
+      ])
+      .enter().append('stop')
+        .attr('offset', d => d.offset)
+        .attr('stop-color', d => d.color);
+
     // Grid and point toggles re-render without resetting zoom
     d3.select('#toggleGrid').on('change', () =>
         zoomed({ transform: d3.zoomTransform(window.__svg.node()) })
@@ -394,18 +409,31 @@ function initializeChart() {
 
 
 function resetZoom() {
-    if(!activePlots.length) return;
-    let maxR=-Infinity, target=null;
-    activePlots.forEach(p=>{
-        const yExt=d3.extent(p.y), rng=yExt[1]-yExt[0];
-        if(rng>maxR){maxR=rng;target=p;}
+    if (!activePlots.length) return;
+  
+    // Reunir todo x,y
+    let xAll = [], yAll = [];
+    activePlots.forEach(p => {
+      if (p.type === 'contour') {
+        xAll = xAll.concat(p.x1);
+        yAll = yAll.concat(p.x2);
+      } else {
+        xAll = xAll.concat(p.x);
+        yAll = yAll.concat(p.y);
+      }
     });
-    if(!target) return;
-    window.__xScale.domain(d3.extent(target.x));
-    window.__yScale.domain(d3.extent(target.y));
-    window.__svg.transition().duration(750).call(window.__zoom.transform,d3.zoomIdentity);
-    setTimeout(() => zoomed({transform:d3.zoomIdentity}), 750);
+  
+    const xExt = d3.extent(xAll);
+    const yExt = d3.extent(yAll);
+  
+    window.__xScale.domain(xExt);
+    window.__yScale.domain(yExt);
+  
+    window.__svg.transition().duration(750)
+        .call(window.__zoom.transform, d3.zoomIdentity);
+    setTimeout(() => zoomed({ transform: d3.zoomIdentity }), 750);
 }
+  
 
 
 
@@ -467,18 +495,19 @@ function zoomed(event) {
 function renderAll() {
     if (!window.__svg || !window.__content) return;
   
+    // 1) Si no hay plots, limpiar y dibujar grid
     if (activePlots.length === 0) {
       window.__content.selectAll('*').remove();
       drawDefaultGrid();
       return;
     }
   
+    // 2) Mostrar contenedores
     d3.select('#plot-container').style('display', 'block');
     d3.select('#plot-controls-wrapper').style('display', 'flex');
   
-    // --- Calcular dominio de ejes incluyendo contour ---
+    // 3) Calcular dominio de ejes (incluye contour)
     let xVals = [], yVals = [], anyLog = false;
-  
     activePlots.forEach(p => {
       if (p.type === 'contour') {
         xVals = xVals.concat(p.x1);
@@ -489,88 +518,81 @@ function renderAll() {
         if (p.plotType === 'log') anyLog = true;
       }
     });
-  
-    const xExtent = d3.extent(xVals);
-    const yExtent = d3.extent(yVals);
-    const xMin = anyLog ? Math.max(xExtent[0], 1e-6) : xExtent[0];
-    const yMin = anyLog ? Math.max(yExtent[0], 1e-6) : yExtent[0];
+    const xExt = d3.extent(xVals);
+    const yExt = d3.extent(yVals);
+    const xMin = anyLog ? Math.max(xExt[0], 1e-6) : xExt[0];
+    const yMin = anyLog ? Math.max(yExt[0], 1e-6) : yExt[0];
   
     window.__xScale = (anyLog ? d3.scaleLog() : d3.scaleLinear())
-      .domain([xMin, xExtent[1]])
+      .domain([xMin, xExt[1]])
       .range([0, window.__innerWidth]);
   
     window.__yScale = (anyLog ? d3.scaleLog() : d3.scaleLinear())
-      .domain([yMin, yExtent[1]])
+      .domain([yMin, yExt[1]])
       .range([window.__innerHeight, 0]);
   
+    // 4) Reset zoom y redraw ejes/grids
     window.__svg.call(window.__zoom.transform, d3.zoomIdentity);
     setTimeout(() => zoomed({ transform: d3.zoomIdentity }), 0);
   
-    // --- Data-join para líneas ---
+    // 5) Dibujar los line plots
     const linePlots = activePlots.filter(p => p.type !== 'contour');
     const lineGroups = window.__content.selectAll('.plot-group')
       .data(linePlots, d => d.plotId);
-  
     const lineEnter = lineGroups.enter()
       .append('g').attr('class', d => `plot-group ${d.plotId}`);
     lineEnter.append('path').attr('class', 'line');
     lineEnter.append('g').attr('class', 'points');
   
     lineGroups.merge(lineEnter).each(function(d) {
-        const g = d3.select(this);
-      
-        // Generar la línea
-        const lineGen = d3.line()
-          .curve(d3.curveLinear)
-          .x((_, i) => window.__xScale(d.x[i]))
-          .y((_, i) => window.__yScale(d.y[i]));
-      
-        const dashMap = {
-          'solid': '',
-          'dashed': '6,4',
-          'dotted': '2,4',
-          'dot-dash': '4,2,2,2'
-        };
-      
-        // Dibujar el path
-        g.select('path.line')
-          .datum(d.y)
-          .attr('fill', 'none')
-          .attr('stroke', d.color)
-          .attr('stroke-width', 2)
-          .attr('stroke-dasharray', dashMap[d.dashStyle] || '')
-          .attr('d', lineGen);
-      
-        // Dibujar los puntos
-        const pts = g.select('g.points').selectAll('circle')
-          .data(d.x.map((xVal, i) => ({ x: xVal, y: d.y[i] })));
-      
-        pts.enter().append('circle')
-          .merge(pts)
-          .attr('r', 4)
-          .attr('fill', d.color)
-          .attr('cx', pt => window.__xScale(pt.x))
-          .attr('cy', pt => window.__yScale(pt.y))
-          .attr('visibility', d3.select('#togglePoints').property('checked') ? 'visible' : 'hidden')
-          .on('mouseover', function(event, pt) {
-            window.__tooltip
-              .html(`x: ${pt.x}<br>y: ${pt.y.toFixed(4)}`)
-              .style('left', (event.offsetX + 15) + 'px')
-              .style('top', (event.offsetY - 25) + 'px')
-              .style('opacity', 1);
-          })
-          .on('mouseout', () => window.__tooltip.style('opacity', 0));
-      
-        pts.exit().remove();
+      const g = d3.select(this);
+      const lineGen = d3.line()
+        .curve(d3.curveLinear)
+        .x((_, i) => window.__xScale(d.x[i]))
+        .y((_, i) => window.__yScale(d.y[i]));
+  
+      const dashMap = {
+        solid:   '',
+        dashed:  '6,4',
+        dotted:  '2,4',
+        'dot-dash': '4,2,2,2'
+      };
+  
+      g.select('path.line')
+        .datum(d.y)
+        .attr('fill', 'none')
+        .attr('stroke', d.color)
+        .attr('stroke-width', 2)
+        .attr('stroke-dasharray', dashMap[d.dashStyle] || '')
+        .attr('d', lineGen);
+  
+      const pts = g.select('g.points').selectAll('circle')
+        .data(d.x.map((xVal, i) => ({ x: xVal, y: d.y[i] })));
+  
+      pts.enter().append('circle')
+        .merge(pts)
+        .attr('r', 4)
+        .attr('fill', d.color)
+        .attr('cx', pt => window.__xScale(pt.x))
+        .attr('cy', pt => window.__yScale(pt.y))
+        .attr('visibility', d3.select('#togglePoints').property('checked') ? 'visible' : 'hidden')
+        .on('mouseover', (event, pt) => {
+          window.__tooltip
+            .html(`x: ${pt.x}<br>y: ${pt.y.toFixed(4)}`)
+            .style('left', (event.offsetX + 15) + 'px')
+            .style('top', (event.offsetY - 25) + 'px')
+            .style('opacity', 1);
+        })
+        .on('mouseout', () => window.__tooltip.style('opacity', 0));
+  
+      pts.exit().remove();
     });
-      
     lineGroups.exit().remove();
   
-    // --- Data-join para contour ---
-    const contourPlots = activePlots.filter(p => p.type === 'contour');
+    // 6) Dibujar los contour plots
+    const contours = activePlots.filter(p => p.type === 'contour');
     const contourGroups = window.__content.selectAll('.contour-group')
-      .data(contourPlots, d => d.plotId);
-  
+      .data(contours, d => d.plotId);
     const contourEnter = contourGroups.enter()
       .append('g').attr('class', d => `contour-group ${d.plotId}`);
   
@@ -578,8 +600,8 @@ function renderAll() {
       const g = d3.select(this);
       g.selectAll('rect').remove();
   
-      // escala de color usando z
-      const colorScale = d3.scaleSequential(d3.interpolateYlGnBu)
+      const colorScale = d3.scaleSequential()
+        .interpolator(d3.interpolateTurbo)
         .domain([d3.min(p.z.flat()), d3.max(p.z.flat())]);
   
       const xs = window.__xScale.copy();
@@ -601,9 +623,50 @@ function renderAll() {
     });
     contourGroups.exit().remove();
   
+    // 7) Colorbar (leyenda) para *todos* los contours
+    if (contours.length) {
+      d3.select('#contour-legend').remove();
+      const allZ = contours.flatMap(p => p.z.flat());
+      const zExt = d3.extent(allZ);
+      const legendW = 20, legendH = 200;
+      const offsetX = window.__innerWidth + 20;  // 20px de separación al plot
+      const offsetY = 10;
+  
+      // Actualizar gradiente
+      const stops = [
+        { offset: '0%',   value: zExt[0] },
+        { offset: '25%',  value: zExt[0] + (zExt[1]-zExt[0])*0.25 },
+        { offset: '50%',  value: (zExt[0]+zExt[1])/2 },
+        { offset: '75%',  value: zExt[0] + (zExt[1]-zExt[0])*0.75 },
+        { offset: '100%', value: zExt[1] }
+      ];
+      const grad = d3.select('#contour-gradient');
+      grad.selectAll('stop')
+        .data(stops)
+        .attr('offset', d => d.offset)
+        .attr('stop-color', d => d3.interpolateTurbo((d.value - zExt[0]) / (zExt[1] - zExt[0])));
+  
+      // Grupo leyenda
+      const legendG = window.__svg.append('g')
+        .attr('id', 'contour-legend')
+        .attr('transform', `translate(${offsetX},${offsetY})`);
+  
+      legendG.append('rect')
+        .attr('width', legendW)
+        .attr('height', legendH)
+        .style('fill', 'url(#contour-gradient)');
+  
+      const zScale = d3.scaleLinear().domain(zExt).range([legendH, 0]);
+      legendG.append('g')
+        .attr('transform', `translate(${legendW},0)`)
+        .call(d3.axisRight(zScale).ticks(5));
+    }
+  
+    // 8) Actualizar leyenda de plots y controles
     updatePlotListUI();
     d3.select('#plot-controls-wrapper').style('display', 'flex');
-  }
+}
+  
   
   
 function drawInteractivePlot(x, y, opts) {
@@ -678,7 +741,7 @@ function updatePlotListUI() {
         colorBox.style.height = '15px';
         colorBox.style.background = p.color;
         if (p.type === 'contour') {
-            // Si es contour, usamos gradient
+            colorBox.style.background = 'none';
             colorBox.style.backgroundImage = p.color;
           } else {
             colorBox.style.background = p.color;
