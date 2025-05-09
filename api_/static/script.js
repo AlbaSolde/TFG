@@ -74,15 +74,6 @@ function plotFromFunction() {
         return;
     } 
 
-    // TODO: FER COMPROVACIONS BÉ!!!
-    for (const [key, value] of Object.entries(inputs)) {
-        if (key !== x && (value === '' || isNaN(parseFloat(value)))) {
-            resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Please enter a valid value for ${key}.</p>`;
-            resultDiv.classList.add('show');
-            return;
-        }
-    }
-
     const lineType = document.getElementById('lineType').value || '-';
     const color = document.getElementById('lineColor').value || 'steelblue';
     const plotType = document.getElementById('plotType').value;
@@ -90,12 +81,20 @@ function plotFromFunction() {
     // CONTOUR CASE
     if (plotType === "contour") {
 
-        // Comprovar si x2 es un valor vàlid
+        // TODO: Comprovar si x2 es un valor vàlid
         if (isNaN(min2) || isNaN(max2) || min2 >= max2) {
             resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Please enter a valid range (min < max) for X2 axis.</p>`;
             resultDiv.classList.add('show');
             return;
         } 
+
+        for (const [key, value] of Object.entries(inputs)) {
+          if ((key !== x && key !== x2) && (value === '' || isNaN(parseFloat(value)))) {
+              resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Please enter a valid value for ${key}.</p>`;
+              resultDiv.classList.add('show');
+              return;
+          }
+        }
 
         const payload = {
         y,
@@ -128,51 +127,58 @@ function plotFromFunction() {
     }
     // LINEAR I LOG CASE
     else{
+      for (const [key, value] of Object.entries(inputs)) {
+          if (key !== x && (value === '' || isNaN(parseFloat(value)))) {
+              resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Please enter a valid value for ${key}.</p>`;
+              resultDiv.classList.add('show');
+              return;
+          }
+      }
 
-        const payload = {
-            y, x,
-            rang_x: [min, max],
-            points,
-            typeModulation,
-            M: parseFloat(M) || 0,
-            SNR: parseFloat(SNR) || 0,
-            Rate: parseFloat(Rate) || 0,
-            N: parseFloat(N) || 0,
-            n: parseFloat(n) || 0,
-            th: parseFloat(th) || 0,
-            color,
-            lineType,
-            plotType
-        };
+      const payload = {
+          y, x,
+          rang_x: [min, max],
+          points,
+          typeModulation,
+          M: parseFloat(M) || 0,
+          SNR: parseFloat(SNR) || 0,
+          Rate: parseFloat(Rate) || 0,
+          N: parseFloat(N) || 0,
+          n: parseFloat(n) || 0,
+          th: parseFloat(th) || 0,
+          color,
+          lineType,
+          plotType
+      };
     
-        /* console.log("Sending payload to /plot_function:", payload); */
+      /* console.log("Sending payload to /plot_function:", payload); */
+  
+      document.getElementById('plot-result').innerHTML = "";
+      document.getElementById('plot-result').classList.remove('show');
     
-        document.getElementById('plot-result').innerHTML = "";
-        document.getElementById('plot-result').classList.remove('show');
-    
-        fetch('/plot_function', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        })
-        .then(response => {
-            if (!response.ok) throw new Error("Error en /plot_function");
-            return response.json();
-        })
-        .then(data => {
-            console.log("Datos recibidos del backend:", data); 
-            drawInteractivePlot(data.x, data.y, {
-                color: color,
-                lineType: lineType,
-                plotType: plotType
-            });
-        })
-        .catch(error => {
-            console.error("Error plotting data", error);
-            const resultDiv = document.getElementById('plot-result');
-            resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Unable to process the data. Please verify your inputs.</p>`;
-            resultDiv.classList.add('show');
-        }); 
+      fetch('/plot_function', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload)
+      })
+      .then(response => {
+          if (!response.ok) throw new Error("Error en /plot_function");
+          return response.json();
+      })
+      .then(data => {
+          console.log("Datos recibidos del backend:", data); 
+          drawInteractivePlot(data.x, data.y, {
+              color: color,
+              lineType: lineType,
+              plotType: plotType
+          });
+      })
+      .catch(error => {
+          console.error("Error plotting data", error);
+          const resultDiv = document.getElementById('plot-result');
+          resultDiv.innerHTML = `<p style="color: red; font-weight: bold;">⚠️ Unable to process the data. Please verify your inputs.</p>`;
+          resultDiv.classList.add('show');
+      }); 
     }
       
 
@@ -296,98 +302,81 @@ function initializeChart() {
     const margin = { top: 20, right: 30, bottom: 50, left: 60 };
     const width = 800;
     const height = 600;
+    // Limpia cualquier gráfico previo
     d3.select('#plot-output').html('');
-    const container = d3.select('#plot-output')
-        .append('div').attr('class','plot-container').style('position','relative');
+
+    // ─── Layout flex para gráfico + lista ─────────────────────────
+    const outer = d3.select('#plot-output')
+      .append('div')
+      .attr('id', 'plot-layout')
+      .style('display', 'flex')
+      .style('gap', '20px')
+      .style('align-items', 'stretch')
+      .style('flex-wrap', 'nowrap');
+
+    const container = outer
+      .append('div')
+      .attr('class','plot-container')
+      .style('flex', '1 1 70%')
+      .style('min-width', '400px')
+      .style('position','relative');
+
+    const legend = outer
+      .append('div')
+      .attr('id', 'plot-list')
+      .style('flex', '0 0 30%')
+      .style('min-width', '180px')
+      .style('max-width', '250px')
+      .style('box-sizing', 'border-box')
+      .style('display', 'flex')
+      .style('flex-direction', 'column')
+      .style('gap', '4px')
+      .style('padding', '8px 4px')
+      .style('margin-top', '0');
+
+    // ─── SVG y ejes ───────────────────────────────────────────────
     const svg = container.append('svg')
-        .attr('viewBox', `0 0 ${width} ${height}`)
-        .attr('preserveAspectRatio','xMidYMid meet')
-        .style('width','100%').style('height','auto');
-    svg.append('line')  // eix inferior
-        .attr('x1', margin.left)
-        .attr('x2', width - margin.right)
-        .attr('y1', height - margin.bottom)
-        .attr('y2', height - margin.bottom)
-        .attr('stroke', 'black');
-    
-    svg.append('line')  // eix esquerre
-        .attr('x1', margin.left)
-        .attr('x2', margin.left)
-        .attr('y1', margin.top)
-        .attr('y2', height - margin.bottom)
-        .attr('stroke', 'black');
-      
+      .attr('viewBox', `0 0 ${width} ${height}`)
+      .attr('preserveAspectRatio','xMidYMid meet')
+      .style('width','100%')
+      .style('height','auto');
+
+    // ejes
+    svg.append('line')
+      .attr('x1', margin.left).attr('x2', width - margin.right)
+      .attr('y1', height - margin.bottom).attr('y2', height - margin.bottom)
+      .attr('stroke','black');
+    svg.append('line')
+      .attr('x1', margin.left).attr('x2', margin.left)
+      .attr('y1', margin.top).attr('y2', height - margin.bottom)
+      .attr('stroke','black');
+
     window.__svg = svg;
-    window.__g = svg.append('g').attr('class','main-group')
-        .attr('transform',`translate(${margin.left},${margin.top})`);
-    window.__innerWidth = width - margin.left - margin.right;
-    window.__innerHeight = height - margin.top - margin.bottom;
-    window.__xScale = d3.scaleLinear().range([0,window.__innerWidth]);
-    window.__yScale = d3.scaleLinear().range([window.__innerHeight,0]);
-    window.__gridX = window.__g.append('g').attr('class','grid-x')
-        .attr('transform',`translate(0,${window.__innerHeight})`);
+    window.__g = svg.append('g')
+      .attr('class','main-group')
+      .attr('transform', `translate(${margin.left},${margin.top})`);
+
+    window.__innerWidth  = width  - margin.left - margin.right;
+    window.__innerHeight = height - margin.top  - margin.bottom;
+    window.__xScale = d3.scaleLinear().range([0, window.__innerWidth]);
+    window.__yScale = d3.scaleLinear().range([window.__innerHeight, 0]);
+
+    window.__gridX = window.__g.append('g')
+      .attr('class','grid-x')
+      .attr('transform', `translate(0,${window.__innerHeight})`);
     window.__gridY = window.__g.append('g').attr('class','grid-y');
-    window.__gX = window.__g.append('g').attr('class','axis x-axis')
-        .attr('transform',`translate(0,${window.__innerHeight})`);
-    window.__gY = window.__g.append('g').attr('class','axis y-axis');
-    window.__content = window.__g.append('g').attr('class','content');
-    window.__tooltip = d3.select('#plot-output').append('div').attr('class','tooltip')
-        .style('position','absolute').style('background','rgba(0,0,0,0.75)')
-        .style('color','white').style('padding','5px 10px')
-        .style('border-radius','5px').style('pointer-events','none')
-        .style('opacity',0);
+    window.__gX   = window.__g.append('g')
+      .attr('class','axis x-axis')
+      .attr('transform', `translate(0,${window.__innerHeight})`);
+    window.__gY   = window.__g.append('g').attr('class','axis y-axis');
 
-    // Controls wrapper (centering)
-    const controlsWrapper = d3.select('#plot-output')
-        .append('div')
-        .attr('id', 'plot-controls-wrapper')
-        .style('display', 'flex')
-        .style('justify-content', 'center')
-        .style('width', '100%');
-
-    const controls = controlsWrapper
-        .append('div')
-        .attr('id','plot-controls')
-        .style('display','flex')
-        .style('justify-content','center')
-        .style('align-items','center')
-        .style('gap','20px')
-        .style('margin-top','12px')
-        .style('flex-wrap','wrap');
-
-    // Reset Zoom button
-    controls.append('button')
-        .attr('type','button')
-        .attr('class','reset-zoom-button')
-        .text('Reset Zoom')
-        .on('click', resetZoom);
-
-    // Clear all plots button
-    controls.append('button')
-        .attr('type','button')
-        .attr('class','reset-zoom-button') // reuse same style
-        .text('Clear All Plots')
-        .on('click', () => {
-            activePlots.length = 0; // clear array without reassignment
-            renderAll();
-            updatePlotListUI();
-        });
-
-    // Grid toggle
-    controls.append('label').html('<input type="checkbox" id="toggleGrid" checked> Show grid');
-
-    // Points toggle
-    controls.append('label').html('<input type="checkbox" id="togglePoints"> Show points');
-
-    // Zoom behavior
-    window.__zoom = d3.zoom().scaleExtent([1,10]).on('zoom',zoomed);
-    window.__svg.call(window.__zoom);
-
+    // ─── Definiciones SVG: gradiente + clipPath ────────────────
     const defs = svg.append('defs');
+    // gradiente para contour
     defs.append('linearGradient')
-        .attr('id', 'contour-gradient')
-        .attr('x1', '0%').attr('y1', '100%')
-        .attr('x2', '0%').attr('y2', '0%')
+      .attr('id', 'contour-gradient')
+      .attr('x1', '0%').attr('y1', '100%')
+      .attr('x2', '0%').attr('y2', '0%')
       .selectAll('stop')
       .data([
         { offset: '0%',   color: '#ffeda0' },
@@ -400,12 +389,93 @@ function initializeChart() {
         .attr('offset', d => d.offset)
         .attr('stop-color', d => d.color);
 
-    // Grid and point toggles re-render without resetting zoom
+    // clipPath para recortar dentro de los ejes
+    defs.append('clipPath')
+      .attr('id', 'plot-area-clip')
+      .append('rect')
+        .attr('x', 0)
+        .attr('y', 0)
+        .attr('width',  window.__innerWidth)
+        .attr('height', window.__innerHeight);
+
+    window.__content = window.__g.append('g')
+        .attr('class','content')
+        .attr('clip-path','url(#plot-area-clip)');
+
+    // Capa de LINEAS (clippeada)
+    window.__lineLayer = window.__g.append('g')
+        .attr('class','line-layer')
+        .attr('clip-path','url(#plot-area-clip)');
+
+    // Capa de PUNTOS (sin clip, para que puedan tocar ejes)
+    window.__pointLayer = window.__g.append('g')
+        .attr('class','point-layer');
+
+
+    // tooltip
+    window.__tooltip = d3.select('#plot-output').append('div')
+      .attr('class','tooltip')
+      .style('position','absolute')
+      .style('background','rgba(0,0,0,0.75)')
+      .style('color','white')
+      .style('padding','5px 10px')
+      .style('border-radius','5px')
+      .style('pointer-events','none')
+      .style('opacity',0);
+
+    // ─── Controles: zoom, clear, grid, points ────────────────────
+    const controlsWrapper = d3.select('#plot-output')
+      .append('div')
+      .attr('id','plot-controls-wrapper')
+      .style('display','flex')
+      .style('justify-content','center')
+      .style('width','100%');
+
+    const controls = controlsWrapper.append('div')
+      .attr('id','plot-controls')
+      .style('display','flex')
+      .style('justify-content','center')
+      .style('align-items','center')
+      .style('gap','20px')
+      .style('margin-top','12px')
+      .style('flex-wrap','wrap');
+
+    controls.append('button')
+      .attr('type','button')
+      .attr('class','reset-zoom-button')
+      .text('Reset Zoom')
+      .on('click', resetZoom);
+
+    controls.append('button')
+      .attr('type','button')
+      .attr('class','reset-zoom-button')
+      .text('Clear All Plots')
+      .on('click', () => {
+        activePlots.length = 0;
+        renderAll();
+        updatePlotListUI();
+      });
+
+    controls.append('label')
+      .html('<input type="checkbox" id="toggleGrid" checked> Show grid');
+    controls.append('label')
+      .html('<input type="checkbox" id="togglePoints"> Show points');
+
+    window.__zoom = d3.zoom().scaleExtent([1,10]).on('zoom', zoomed);
+    window.__svg.call(window.__zoom);
+
+    // toggles re-render sin reset zoom
     d3.select('#toggleGrid').on('change', () =>
-        zoomed({ transform: d3.zoomTransform(window.__svg.node()) })
-      );
-    d3.select('#togglePoints').on('change',()=>zoomed(window.__lastZoomEvent || { transform: d3.zoomTransform(window.__svg.node()) }));
+      zoomed({ transform: d3.zoomTransform(window.__svg.node()) })
+    );
+    d3.select('#togglePoints').on('change', () =>
+      zoomed(window.__lastZoomEvent || { transform: d3.zoomTransform(window.__svg.node()) })
+    );
+
+    // mostar header aunque no haya plots
+    updatePlotListUI();
 }
+
 
 
 function resetZoom() {
@@ -441,20 +511,30 @@ function zoomed(event) {
     const t = event.transform;
     window.__lastZoomEvent = event;
 
-    // 1) Rescala
+    // 1) Rescala los ejes
     const newX = t.rescaleX(window.__xScale);
     const newY = t.rescaleY(window.__yScale);
 
-    // 2) Eixos
-    window.__gX.call(d3.axisBottom(newX)).select('.domain').remove();
-    window.__gY.call(d3.axisLeft(newY)).select('.domain').remove();
+    // 2) Redibuja ejes con formato de números sin sufijo “m”
+    window.__gX.call(
+      d3.axisBottom(newX)
+        .ticks(6)                  // opcional: número de ticks
+        .tickFormat(d3.format(".3f"))
+    ).select('.domain').remove();
+
+    window.__gY.call(
+      d3.axisLeft(newY)
+        .ticks(6)
+        .tickFormat(d3.format(".3f"))
+    ).select('.domain').remove();
+
 
     // 3) Grid toggle
     if (d3.select('#toggleGrid').property('checked')) {
         const xTicks = newX.ticks();
         const yTicks = newY.ticks();
 
-        // verticals
+        // Vertical lines
         window.__gridX.selectAll('line')
             .data(xTicks)
             .join('line')
@@ -465,7 +545,7 @@ function zoomed(event) {
             .attr('stroke', '#ddd')
             .attr('stroke-dasharray', '2,2');
 
-        // horitzontals
+        // Horizontal lines
         window.__gridY.selectAll('line')
             .data(yTicks)
             .join('line')
@@ -476,27 +556,37 @@ function zoomed(event) {
             .attr('stroke', '#ddd')
             .attr('stroke-dasharray', '2,2');
     } else {
-        // treure totes les lineas cuan estigui off
         window.__gridX.selectAll('line').remove();
         window.__gridY.selectAll('line').remove();
     }
 
-    // 4) Contingut (curvas, puntos, zoom, tooltips…)
-    window.__content.attr('transform', t);
+    // 4) Aplica el mismo transform a todas las capas
+    window.__lineLayer.attr('transform', t);    // líneas (clip-path)
+    window.__content.attr('transform', t);      // contours (clip-path)
+    window.__pointLayer.attr('transform', t);   // puntos (sin clip)
+
+    // 5) Ajusta grosores de línea según zoom
     const scaleFactor = 1 / t.k;
-    d3.selectAll('g.points circle').attr('r', 4 * scaleFactor);
-    d3.selectAll('path.line').attr('stroke-width', 2 * scaleFactor);
-    const visible = d3.select('#togglePoints').property('checked') ? 'visible' : 'hidden';
-    d3.selectAll('g.points circle').attr('visibility', visible);
+    d3.selectAll('path.line')
+      .attr('stroke-width', 2 * scaleFactor);
+
+    // 6) Ajusta radios y visibilidad de puntos
+    const showPoints = d3.select('#togglePoints').property('checked') ? 'visible' : 'hidden';
+    d3.selectAll('circle.point')
+      .attr('r', 4 * scaleFactor)
+      .attr('visibility', showPoints);
 }
 
 
 
+
 function renderAll() {
-    if (!window.__svg || !window.__content) return;
+    if (!window.__svg /*|| !window.__content*/) return;
   
     // 1) Si no hay plots, limpiar y dibujar grid
     if (activePlots.length === 0) {
+      window.__lineLayer.selectAll('*').remove();
+      window.__pointLayer.selectAll('*').remove();
       window.__content.selectAll('*').remove();
       drawDefaultGrid();
       return;
@@ -506,30 +596,32 @@ function renderAll() {
     d3.select('#plot-container').style('display', 'block');
     d3.select('#plot-controls-wrapper').style('display', 'flex');
   
-    // 3) Calcular dominio de ejes (incluye contour)
-    let xVals = [], yVals = [], anyLog = false;
+    
+    // ─── Escalas LINEALES siempre ────────────────────────────
+    let xVals = [], yVals = [];
     activePlots.forEach(p => {
       if (p.type === 'contour') {
-        xVals = xVals.concat(p.x1);
-        yVals = yVals.concat(p.x2);
+        xVals.push(...p.x1);
+        yVals.push(...p.x2);
       } else {
-        xVals = xVals.concat(p.x);
-        yVals = yVals.concat(p.y);
-        if (p.plotType === 'log') anyLog = true;
+        xVals.push(...p.x);
+        yVals.push(...p.y);
       }
     });
-    const xExt = d3.extent(xVals);
-    const yExt = d3.extent(yVals);
-    const xMin = anyLog ? Math.max(xExt[0], 1e-6) : xExt[0];
-    const yMin = anyLog ? Math.max(yExt[0], 1e-6) : yExt[0];
-  
-    window.__xScale = (anyLog ? d3.scaleLog() : d3.scaleLinear())
-      .domain([xMin, xExt[1]])
-      .range([0, window.__innerWidth]);
-  
-    window.__yScale = (anyLog ? d3.scaleLog() : d3.scaleLinear())
-      .domain([yMin, yExt[1]])
-      .range([window.__innerHeight, 0]);
+
+    // dominio mínimo y máximo sobre datos transformados (pueden ser negativos)
+    const xExtent = d3.extent(xVals);
+    const yExtent = d3.extent(yVals);
+
+    // escala lineal pura
+    window.__xScale = d3.scaleLinear()
+      .domain([ xExtent[0], xExtent[1] ])
+      .range([ 0, window.__innerWidth ]);
+
+    window.__yScale = d3.scaleLinear()
+      .domain([ yExtent[0], yExtent[1] ])
+      .range([ window.__innerHeight, 0 ]);
+
   
     // 4) Reset zoom y redraw ejes/grids
     window.__svg.call(window.__zoom.transform, d3.zoomIdentity);
@@ -537,8 +629,9 @@ function renderAll() {
   
     // 5) Dibujar los line plots
     const linePlots = activePlots.filter(p => p.type !== 'contour');
-    const lineGroups = window.__content.selectAll('.plot-group')
-      .data(linePlots, d => d.plotId);
+    const lineGroups = window.__lineLayer.selectAll('.plot-group')
+        .data(linePlots, d => d.plotId);
+
     const lineEnter = lineGroups.enter()
       .append('g').attr('class', d => `plot-group ${d.plotId}`);
     lineEnter.append('path').attr('class', 'line');
@@ -566,10 +659,11 @@ function renderAll() {
         .attr('stroke-dasharray', dashMap[d.dashStyle] || '')
         .attr('d', lineGen);
   
-      const pts = g.select('g.points').selectAll('circle')
-        .data(d.x.map((xVal, i) => ({ x: xVal, y: d.y[i] })));
+      const pts = window.__pointLayer.selectAll(`.point-${d.plotId}`)
+          .data(d.x.map((xVal,i) => ({ x:xVal, y:d.y[i], plotId:d.plotId })));
   
       pts.enter().append('circle')
+        .attr('class', p => `point point-${p.plotId}`)
         .merge(pts)
         .attr('r', 4)
         .attr('fill', d.color)
@@ -661,10 +755,27 @@ function renderAll() {
         .attr('transform', `translate(${legendW},0)`)
         .call(d3.axisRight(zScale).ticks(5));
     }
+    else {
+      d3.select('#contour-legend').remove(); // 🔥 Borra la leyenda si ya no hay contour plots
+    }
   
     // 8) Actualizar leyenda de plots y controles
     updatePlotListUI();
     d3.select('#plot-controls-wrapper').style('display', 'flex');
+    const chartBox = document.querySelector('.plot-container');
+    const listBox  = document.getElementById('plot-list');
+    if (chartBox && listBox) {
+      // miden alto real tras dibujar el SVG
+      const H = chartBox.getBoundingClientRect().height;
+      listBox.style.height = H + 'px';
+      listBox.style.boxSizing = 'border-box';
+    }
+
+    // Limpiar puntos de plots eliminados
+    window.__pointLayer.selectAll('.point')
+        .filter(p => !activePlots.find(ap => ap.plotId === p.plotId))
+        .remove();
+
 }
   
   
@@ -672,42 +783,40 @@ function renderAll() {
 function drawInteractivePlot(x, y, opts) {
     opts = opts || {};
     const plotId = `plot-${plotIdCounter++}`;
-    // Generar el label: si nos llega opts.label lo usamos, si no, el default de From Function
-    let label;
-    if (opts.label && opts.label.length > 0) {
-      label = opts.label;
-    } else {
-      const yLabel = document.getElementById('yVar')?.selectedOptions[0]?.text || 'Y';
-      const xLabel = document.getElementById('xVar')?.selectedOptions[0]?.text || 'X';
-      label = `${yLabel} / ${xLabel}`;
-    }
 
+    // 1) Etiqueta
+    let label = opts.label && opts.label.length > 0
+      ? opts.label
+      : `${document.getElementById('yVar')?.selectedOptions[0]?.text || 'Y'} / ${document.getElementById('xVar')?.selectedOptions[0]?.text || 'X'}`;
 
-    const color = opts.color || 'steelblue';
-    const dashStyle = opts.lineType || 'solid';
-    const plotType = opts.plotType || 'linear';
+    const color    = opts.color     || 'steelblue';
+    const dashStyle= opts.lineType  || 'solid';
+    const plotType = opts.plotType  || 'linear';
 
+    // 2) Copia datos originales
     let xCopy = [...x];
     let yCopy = [...y];
 
-    // Filtrar ceros o negativos si es log
-    if (plotType === 'log') {
-        const filtered = xCopy.map((val, i) => ({ x: val, y: yCopy[i] }))
-            .filter(p => p.x > 0 && p.y > 0);
-        xCopy = filtered.map(p => p.x);
-        yCopy = filtered.map(p => p.y);
+    // 3) Aplica log₁₀ a los datos si el usuario lo pidió
+    if (plotType === 'log'  || plotType === 'logX') {
+      xCopy = xCopy.map(v => Math.log10(v));
+    }
+    if (plotType === 'log'  || plotType === 'logY') {
+      yCopy = yCopy.map(v => Math.log10(v));
     }
 
+    // 4) Guarda los datos ya transformados en activePlots
     activePlots.push({ plotId, x: xCopy, y: yCopy, color, dashStyle, label, plotType });
     renderAll();
 }
 
 
+
 function updatePlotListUI() {
     let container = document.getElementById('plot-list');
     if (!container) {
-        container = document.createElement('div');
-        container.id = 'plot-list';
+        container = document.getElementById('plot-list');
+        if (!container) return;
         container.style.marginTop = '20px';
         container.style.display = 'flex';
         container.style.flexDirection = 'column';
@@ -718,6 +827,7 @@ function updatePlotListUI() {
         document.getElementById('plot-output').appendChild(container);
     }
     container.innerHTML = '<h4>Active plots:</h4>';
+    container.style.marginTop = '0';
 
     activePlots.forEach(p => {
         const item = document.createElement('div');
@@ -730,6 +840,7 @@ function updatePlotListUI() {
         item.style.alignItems = 'center';
         item.style.columnGap = '10px';
         item.style.transition = 'transform 0.3s ease';
+        item.style.paddingLeft = '12px';
         item.style.width = 'calc(100% - 20px)';
         item.style.boxSizing = 'border-box';
         item.style.paddingRight = '10px';
@@ -773,7 +884,9 @@ function updatePlotListUI() {
 
         // botón de eliminar (igual que antes)…
         const btn = document.createElement('button');
-        btn.textContent = '❌ Remove';
+        btn.textContent = '❌';
+        btn.style.padding = '2px 6px';
+        btn.style.fontSize = '0.85em';
         btn.type = 'button';
         btn.style.marginRight = '10px';
         btn.onclick = () => removePlot(p.plotId);
@@ -797,7 +910,7 @@ function removePlot(plotId) {
 
     if (activePlots.length === 0 && window.__content) {
         window.__content.selectAll('*').remove();
-
+        d3.select('#contour-legend').remove();
         // Si se eliminó un gráfico logarítmico, forzamos la escala log
         drawDefaultGrid(removedPlot?.plotType === 'log');
     }

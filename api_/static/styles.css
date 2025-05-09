@@ -74,6 +74,8 @@ svg {
 
 .plot-container {
     border: none;
+    flex: 1 1 65%;
+    max-width: 300px;
 }
 
 
@@ -544,7 +546,53 @@ form button.compute-error:active,
 .manual-fullwidth-group textarea.input-error {
     border-color: #e74c3c;
     background-color: #fff5f5;
-  }
+}
+
+
+#plot-layout {
+    margin-top: 20px;
+    display: flex;
+    flex-wrap: nowrap;
+    gap: 30px;
+    justify-content: center;
+    align-items: stretch;
+}
+
+#plot-list {
+  /* la parte de la lista de plots */
+  flex: 0 0 30%;    /* ocupa el 35% fijo */
+  margin-top: 0;    /* anulamos ese espacio de arriba */
+  padding: 15px 8px 15px 20px !important;
+  background: #f9f9f9;
+  border-radius: 8px;
+  box-shadow: 0 2px 6px rgba(0,0,0,0.05);
+  overflow-y: auto;
+  box-sizing: border-box; 
+}
+
+/*  ─── Centrar el texto de las leyendas ───  */
+#plot-list .legend-item {
+    padding: 4px 4px !important;   /* ahora 8px a izquierda/derecha */
+    justify-items: start;           /* asegúrate que el texto quede a la izquierda */
+    transition: transform 0.3s ease; 
+    grid-column-gap: 6px !important;
+}
+#plot-list .legend-item span {
+  /* Asegura que cada <span> (el texto) vaya centrado */
+  text-align: left;
+}
+
+#plot-list .legend-item:hover {
+  transform: scale(0.98);  /* efecto “encoger” al pasar el ratón */
+}
+
+#plot-list h4 {
+  margin-top: 0;
+  text-align: center;
+  font-size: 1em;
+  color: rgb(47,48,79);
+}
+
 
 /* =============================
    Override para manual-section

@@ -7,7 +7,7 @@
     <!-- Estil del html -->
     <!-- <link rel="stylesheet" href="styles.css"/> --> <!-- Per obrir directament al navegador -->
     <!--     <link rel="stylesheet" href="/static/styles.css"> Pel docker -->
-    <link rel="stylesheet" href="/static/styles.css?v=1.9">
+    <link rel="stylesheet" href="/static/styles.css?v=1.18">
 
 
     <!-- Importa D3 -->
@@ -16,7 +16,7 @@
     <!-- Les funcions estan definides a script.js -->
     <!-- <script src="script.js"></script> --> <!-- Pel obrir directament amb el navegador -->
     <!-- <script src="/static/script.js"></script> Pel docker -->
-    <script src="/static/script.js?v=1.14"></script>
+    <script src="/static/script.js?v=1.31"></script>
 
 
 </head>
@@ -87,7 +87,9 @@
                         <label for="plotType">Plot Type:</label>
                         <select id="plotType" onchange="onLineTypeChange()">
                             <option value="linear">Linear</option>
-                            <option value="log">Log</option>
+                            <option value="log">LogLog</option>
+                            <option value="logX">Log X</option>
+                            <option value="logY">Log Y</option>
                             <option value="contour">Contour</option>
                         </select>
                     </div>
